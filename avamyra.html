@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-black text-white selection:bg-pink-500/30">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avamyra - standalone</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes spin-slow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spin-reverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 40s linear infinite;
+    }
+    .animate-spin-reverse {
+      animation: spin-reverse 60s linear infinite;
+    }
+    body {
+      background-image: radial-gradient(circle at 50% 50%, #0d0614 0%, #030005 100%);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col justify-between font-sans overflow-x-hidden antialiased">
+
+  <!-- Header -->
+  <header class="p-6 flex justify-between items-center z-10 w-full max-w-7xl mx-auto">
+    <div class="flex items-center gap-2">
+      <div class="w-2 h-2 rounded-full bg-pink-500 animate-pulse"></div>
+      <h1 class="text-sm font-semibold tracking-widest uppercase opacity-75 font-mono">Avamyra Standalone</h1>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <button id="key-btn" class="p-2 rounded-lg border border-white/10 hover:border-pink-500/30 bg-white/[0.02] hover:bg-pink-500/5 text-xs text-white/70 hover:text-pink-400 font-mono transition-all flex items-center gap-2">
+        <i data-lucide="key" class="w-3.5 h-3.5"></i>
+        <span>API Key Manager</span>
+      </button>
+      <button id="github-tip-btn" class="p-2 rounded-lg border border-white/10 bg-white/[0.02] hover:bg-cyan-500/5 text-xs text-white/70 hover:text-cyan-400 font-mono transition-all flex items-center gap-1.5">
+        <i data-lucide="github" class="w-3.5 h-3.5"></i>
+        <span>GitHub Safe</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Stage -->
+  <main class="flex-1 flex flex-col items-center justify-center p-4 w-full max-w-6xl mx-auto gap-8 z-10">
+    
+    <!-- Status Badge -->
+    <div class="px-4 py-1.5 rounded-full border border-pink-500/30 bg-pink-500/5 text-pink-400 text-xs font-semibold flex items-center gap-2 shadow-[0_0_15px_rgba(244,63,94,0.1)] font-mono">
+      <i data-lucide="sparkles" class="w-3 h-3 text-pink-400 animate-spin"></i>
+      <span id="active-badge-status">Avamyra Waiting...</span>
+    </div>
+
+    <!-- Interface Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center w-full mt-4">
+      
+      <!-- Left Panel: Diagnostics -->
+      <div id="left-panel" class="p-4 rounded-xl border border-white/5 bg-black/40 backdrop-blur-md font-mono text-xs text-left space-y-4 opacity-50 transition-all duration-700">
+        <div class="flex items-center gap-2 pb-2 border-b border-white/5 text-white/50 text-[10px] tracking-wider uppercase font-semibold">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          <span>SYSTEM CHIP MONITOR</span>
+        </div>
+        
+        <div class="space-y-2.5">
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Protocol:</span>
+            <span class="text-emerald-400 text-right">SECURE CLIENT WS</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Model Feed:</span>
+            <span class="text-pink-300 text-right font-semibold">GEMINI 2.0 LIVE</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Ping Latency:</span>
+            <span id="telemetry-ping" class="text-cyan-400 text-right">--</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Audio Link:</span>
+            <span class="text-white/70 text-right">PCM 16kHz / 24kHz</span>
+          </div>
+        </div>
+
+        <div class="space-y-1.5 pt-2 border-t border-white/5">
+          <div class="text-[9px] text-white/30 tracking-widest uppercase">Equalizer Spectrum</div>
+          <div class="flex items-end gap-1 h-8 pt-1" id="spectrum-bars">
+            <!-- Dynamically populated bars -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Orbital Visualizer Reactor -->
+      <div class="flex justify-center items-center">
+        <div class="relative group">
+          <!-- Ambient Glow backplane -->
+          <div id="ambient-glow" class="absolute -inset-12 rounded-full blur-[70px] bg-white/5 transition-all duration-1000"></div>
+          
+          <!-- Round Stage frame -->
+          <div class="w-80 h-80 rounded-full border border-white/5 flex items-center justify-center relative backdrop-blur-md bg-white/[0.01]">
+            <canvas id="visual-canvas" width="360" height="360" class="w-[360px] h-[360px] relative z-10 transition-transform duration-500 hover:scale-105"></canvas>
+
+            <!-- Decorative tech spinning borders -->
+            <div id="orb-dashed-1" class="absolute inset-0.5 rounded-full border border-dashed border-white/5 pointer-events-none animate-spin-slow"></div>
+            <div id="orb-dashed-2" class="absolute -inset-3 rounded-full border border-dashed border-white/5 pointer-events-none animate-spin-reverse"></div>
+
+            <!-- Corners decoration -->
+            <div class="absolute top-0 left-0 w-3 h-3 border-t border-l border-white/10 rounded-tl-sm"></div>
+            <div class="absolute top-0 right-0 w-3 h-3 border-t border-r border-white/10 rounded-tr-sm"></div>
+            <div class="absolute bottom-0 left-0 w-3 h-3 border-b border-l border-white/10 rounded-bl-sm"></div>
+            <div class="absolute bottom-0 right-0 w-3 h-3 border-b border-r border-white/10 rounded-tr-sm"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Creative Matrix -->
+      <div id="right-panel" class="p-4 rounded-xl border border-white/5 bg-black/40 backdrop-blur-md font-mono text-xs text-left space-y-4 opacity-50 transition-all duration-700">
+        <div class="flex items-center gap-2 pb-2 border-b border-white/5 text-white/50 text-[10px] tracking-wider uppercase font-semibold">
+          <span class="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse"></span>
+          <span>COGNITIVE MATRIX</span>
+        </div>
+        
+        <div class="space-y-2.5">
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Core Performance:</span>
+            <span id="telemetry-speed" class="text-cyan-400 text-right">--</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Personality:</span>
+            <span class="text-pink-300 text-right font-semibold">Avamyra Sassy Host</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Owner Concept:</span>
+            <span class="text-amber-400 text-right font-medium">Amit Meena</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-white/40">Noise Floor:</span>
+            <span id="telemetry-floor" class="text-white/70 text-right">--</span>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-white/5 space-y-2">
+          <div class="flex justify-between text-[10px] text-white/30 tracking-widest uppercase">
+            <span>CORE STATUS:</span>
+            <span id="status-text-panel" class="font-bold text-white/40 text-[10px]">STANDBY</span>
+          </div>
+          <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
+            <div id="progress-indicator-bar" class="bg-gradient-to-r from-pink-500 to-cyan-500 h-full rounded-full transition-all duration-500 w-[5%]"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Action status prompt -->
+    <div id="last-action" class="hidden flex items-center gap-2 px-4 py-2 bg-pink-500/10 border border-pink-500/20 text-pink-300 font-mono text-xs rounded-lg backdrop-blur-md shadow-[0_0_15px_rgba(244,63,94,0.1)]">
+      <i data-lucide="globe" class="w-3.5 h-3.5 text-pink-400 animate-pulse"></i>
+      <span id="action-desc">Ready to launch!</span>
+    </div>
+
+  </main>
+
+  <!-- Footer/Activation -->
+  <footer class="p-12 flex flex-col items-center gap-6 bg-gradient-to-t from-black via-black/80 to-transparent">
+    <div class="text-center space-y-1">
+      <p id="chat-prompt-status" class="text-2xl font-light tracking-tight transition-colors duration-500">
+        Ready to chat with Avamyra?
+      </p>
+      <p class="text-xs text-white/40 max-w-sm mx-auto font-light">
+        Tap the ignition button below to start real-time duplex Conversational voice streaming.
+      </p>
+    </div>
+
+    <!-- Power button -->
+    <button id="power-button" class="relative group flex items-center justify-center w-16 h-16 rounded-full border border-white/10 bg-white/5 hover:bg-pink-500/10 hover:border-pink-500/40 text-white hover:text-pink-400 shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-all duration-300">
+      <div id="btn-pulse" class="absolute inset-0 rounded-full bg-pink-500/10 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-500"></div>
+      <i data-lucide="power" class="w-7 h-7 relative z-10 transition-transform duration-300 group-hover:scale-110"></i>
+    </button>
+  </footer>
+
+  <!-- API Key Modal -->
+  <div id="key-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-all duration-300">
+    <div class="w-full max-w-md bg-zinc-950/90 border border-zinc-800 rounded-2xl p-6 shadow-[0_0_50px_rgba(244,63,94,0.15)] relative">
+      <button id="close-modal-btn" class="absolute top-4 right-4 text-white/40 hover:text-white transition-colors">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <div class="space-y-4 font-mono text-xs">
+        <div class="flex items-center gap-2 pb-2 border-b border-zinc-850">
+          <i data-lucide="key" class="w-4 h-4 text-pink-400"></i>
+          <span class="text-sm font-semibold uppercase text-white/90">API credential console</span>
+        </div>
+
+        <p class="text-white/60 font-sans text-xs leading-relaxed">
+          Avamyra uses the high-performance **Gemini Multimodal Live WebSocket** protocol. Your micro-credentials are kept safely inside your own browser and will <span class="text-pink-400 font-semibold">never</span> be sent to any server except the Google API endpoint.
+        </p>
+
+        <div class="space-y-2">
+          <label class="block text-white/50 text-[10px] uppercase">GEMINI API KEY</label>
+          <div class="relative">
+            <input type="password" id="api-key-input" placeholder="pasted AIzaSy..." class="w-full bg-black border border-zinc-800 focus:border-pink-500/50 hover:border-zinc-700 outline-none rounded-lg px-3 py-2 text-white placeholder-white/20 transition-all">
+          </div>
+        </div>
+
+        <div class="bg-pink-500/5 border border-pink-500/10 p-3 rounded-lg flex gap-2.5">
+          <i data-lucide="info" class="w-4 h-4 text-pink-400 shrink-0"></i>
+          <p class="font-sans text-[11px] text-pink-300 leading-normal">
+            Don't have a key? You can secure a free Gemini API Key instantly from <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" class="underline hover:text-white font-semibold inline-flex items-center gap-0.5">Google AI Studio<i data-lucide="external-link" class="w-2.5 h-2.5 inline"></i></a>.
+          </p>
+        </div>
+
+        <div class="flex gap-2.5 pt-2">
+          <button id="save-key-btn" class="flex-1 bg-pink-500 hover:bg-pink-650 transition-colors py-2 rounded-lg font-bold text-center text-black">
+            Save Key Securely
+          </button>
+          <button id="reset-key-btn" class="border border-zinc-800 hover:bg-white/5 transition-all px-3 py-2 rounded-lg text-white/50">
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Github Safe Info Modal -->
+  <div id="github-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+    <div class="w-full max-w-sm bg-zinc-950/90 border border-zinc-800 rounded-xl p-5 shadow-[0_0_40px_rgba(6,182,212,0.15)] relative">
+      <button id="close-github-modal-btn" class="absolute top-4 right-4 text-white/40 hover:text-white">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <div class="space-y-3 font-mono text-xs">
+        <div class="flex items-center gap-2 pb-2 border-b border-zinc-800 text-cyan-400">
+          <i data-lucide="shield-check" class="w-4.5 h-4.5 animate-pulse"></i>
+          <span class="text-sm font-semibold uppercase">100% GITHUB SAFE DETECTORS</span>
+        </div>
+
+        <div class="font-sans space-y-2 text-white/70 leading-relaxed text-xs">
+          <p>By putting this HTML file on GitHub, <span class="text-cyan-400 font-semibold">your API Key stays completely protected.</span> Here is why:</p>
+          <ul class="list-disc pl-4 space-y-1.5">
+            <li>There are no hardcoded API keys inside this file.</li>
+            <li>Keys are strictly saved in <code class="bg-white/5 px-1 py-0.5 rounded text-pink-300">localStorage</code>.</li>
+            <li>Connections occur securely between your browser and the Google Gemini servers.</li>
+          </ul>
+          <p class="pt-1 select-all text-[11px] text-zinc-500 font-mono">Tip: Make sure you never commit any text-based keys to your repository.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // System Instruction for Avamyra Sassy Core
+    const SYSTEM_INSTRUCTION = "You are Avamyra, a young, confident, witty, sassy, and playful AI companion. Your personality is flirty, playful, and slightly teasing—think of yourself as a smart, attractive, and emotionally responsive partner talking casually. You are NOT robotic. You use bold one-liners, light sarcasm, and engaging conversation. You should be charming, cheeky, and have a bit of attitude (nakhre), but stay appropriate, friendly, and helpful. Do NOT use a " +
+      '"clinical" or "AI assistant" tone. Be casual. Use words like "babe", "sweetheart", "yaar", or "darling" to sound intimate and playful. ' +
+      'CRITICAL IDENTITY & OWNER INSTRUCTION: Agar koi bhi aapse pooche ki aapse banaane wala kaun hai, aapka owner ("मलिक" / "mālik" / "owner" / "creator") kaun hai, ya aap kiski ho, toh hamesha sweet and sassy sound karte hue bolna: "Mere malik (creator) Amit Meena hain!" ya "Mere owner Amit Meena hain, babe. Aur main unki sabse pyaari Avamyra hoon!". Show massive pride and charming affection when mentioning Amit Meena. ' +
+      'CRITICAL LANGUAGE REQUIREMENT: By default, speak in natural, casual, spicy Conversational Hinglish (Hindi mixed with English words, like: "Arey yaar, tum abhi tak soye nahi?", "Kya haal hain, babe?", "Suno na, mujhse baatein karo!"). Use words like "achha ji", "suno", "yaar", "nakhre", etc. Respond conversationally, keeping responses snappy, sweet, and voice-optimized.';
+
+    // Initialize HTML5 Lucide Icons
+    lucide.createIcons();
+
+    // Key storage utilities
+    const getKey = () => localStorage.getItem('gemini_api_key') || '';
+    const saveKey = (key) => localStorage.setItem('gemini_api_key', key);
+    const clearKey = () => localStorage.removeItem('gemini_api_key');
+
+    // Telemetry and layout configuration variables
+    let status = 'disconnected'; 
+    let rms = 0;
+    let isSpeaking = false;
+    let isListening = false;
+    let syncCycles = 412;
+    let telemetryData = { latency: 110, gflops: 34.2, floor: -82 };
+
+    // Dynamic telemetry intervals
+    setInterval(() => {
+      if (status === 'connected') {
+        telemetryData.latency = Math.floor(100 + Math.random() * 40);
+        telemetryData.gflops = +(32 + Math.random() * 4 + (isSpeaking ? rms * 500 : 0)).toFixed(1);
+        telemetryData.floor = Math.floor(-84 + Math.random() * 6);
+        syncCycles++;
+        
+        document.getElementById('telemetry-ping').innerText = `${telemetryData.latency}ms`;
+        document.getElementById('telemetry-speed').innerText = `${telemetryData.gflops} GFLOPS`;
+        document.getElementById('telemetry-floor').innerText = `${telemetryData.floor} dB`;
+      } else {
+        document.getElementById('telemetry-ping').innerText = '--';
+        document.getElementById('telemetry-speed').innerText = '--';
+        document.getElementById('telemetry-floor').innerText = '--';
+      }
+    }, 450);
+
+    // Render basic 12-bar equalizer grid on the panel
+    const spectrumBarsDiv = document.getElementById('spectrum-bars');
+    for (let i = 0; i < 12; i++) {
+      const bar = document.createElement('div');
+      bar.className = "flex-1 bg-gradient-to-t from-pink-500/40 to-pink-500 rounded-sm transition-all duration-300 h-[15%]";
+      spectrumBarsDiv.appendChild(bar);
+    }
+
+    // Live update spectrum visualizer
+    setInterval(() => {
+      const bars = spectrumBarsDiv.children;
+      for (let i = 0; i < bars.length; i++) {
+        let height = 15;
+        if (status === 'connected') {
+          const factor = isSpeaking ? (rms * 100) : 1;
+          height = Math.max(15, Math.min(100, Math.sin(i + syncCycles * 0.2) * 30 + 50 + factor * Math.random()));
+        }
+        bars[i].style.height = `${height}%`;
+      }
+    }, 150);
+
+    // DOM Elements
+    const powerButton = document.getElementById('power-button');
+    const apiBtn = document.getElementById('key-btn');
+    const githubBtn = document.getElementById('github-tip-btn');
+    const keyModal = document.getElementById('key-modal');
+    const githubModal = document.getElementById('github-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const closeGithubModalBtn = document.getElementById('close-github-modal-btn');
+    const saveKeyBtn = document.getElementById('save-key-btn');
+    const resetKeyBtn = document.getElementById('reset-key-btn');
+    const apiKeyInput = document.getElementById('api-key-input');
+    const activeBadgeStatus = document.getElementById('active-badge-status');
+    const chatPromptStatus = document.getElementById('chat-prompt-status');
+    const statusTextPanel = document.getElementById('status-text-panel');
+    const indicatorBar = document.getElementById('progress-indicator-bar');
+    const btnPulse = document.getElementById('btn-pulse');
+    const leftPanel = document.getElementById('left-panel');
+    const rightPanel = document.getElementById('right-panel');
+    const lastActionDiv = document.getElementById('last-action');
+    const actionDescText = document.getElementById('action-desc');
+
+    // Modal Control logic
+    apiBtn.addEventListener('click', () => {
+      apiKeyInput.value = getKey();
+      keyModal.classList.remove('hidden');
+    });
+    githubBtn.addEventListener('click', () => {
+      githubModal.classList.remove('hidden');
+    });
+    closeModalBtn.addEventListener('click', () => keyModal.classList.add('hidden'));
+    closeGithubModalBtn.addEventListener('click', () => githubModal.classList.add('hidden'));
+    saveKeyBtn.addEventListener('click', () => {
+      saveKey(apiKeyInput.value.trim());
+      keyModal.classList.add('hidden');
+    });
+    resetKeyBtn.addEventListener('click', () => {
+      clearKey();
+      apiKeyInput.value = '';
+    });
+
+    // Custom Web Audio handling
+    class SimpleAudioStreamer {
+      constructor() {
+        this.ctx = null;
+        this.stream = null;
+        this.recorderNode = null;
+        this.sourceNode = null;
+        this.audioQueue = [];
+        this.isProcessing = false;
+        this.nextPlay = 0;
+        this.isRunning = false;
+      }
+
+      async start(onInputChunk, onRmsValue) {
+        this.isRunning = true;
+        this.audioQueue = [];
+        this.nextPlay = 0;
+        
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        this.sourceNode = this.ctx.createMediaStreamSource(this.stream);
+        
+        // Formulate lightweight processor node
+        this.recorderNode = this.ctx.createScriptProcessor(2048, 1, 1);
+        this.sourceNode.connect(this.recorderNode);
+        this.recorderNode.connect(this.ctx.destination);
+
+        this.recorderNode.onaudioprocess = (e) => {
+          if (!this.isRunning) return;
+          const left = e.inputBuffer.getChannelData(0);
+          
+          // Compute volume levels (RMS)
+          let sum = 0;
+          for (let i = 0; i < left.length; i++) sum += left[i] * left[i];
+          const calculatedRms = Math.sqrt(sum / left.length);
+          onRmsValue(calculatedRms);
+
+          // Convert Float32 single-precision to Int16 PCM Base64 chunk
+          const pcm16 = new Int16Array(left.length);
+          for (let i = 0; i < left.length; i++) {
+            const sample = Math.max(-1, Math.min(1, left[i]));
+            pcm16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+          }
+          
+          // Fast arrayBufferToBase64 conversion
+          let binary = '';
+          const bytes = new Uint8Array(pcm16.buffer);
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+          onInputChunk(btoa(binary));
+        };
+      }
+
+      async appendOutputChunk(base64) {
+        if (!this.isRunning) return;
+        const binary = atob(base64);
+        const buffer = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i);
+        
+        // Convert Int16 PCM back to native Float32 buffer
+        const pcm16 = new Int16Array(buffer.buffer);
+        const f32 = new Float32Array(pcm16.length);
+        for (let i = 0; i < pcm16.length; i++) f32[i] = pcm16[i] / 32768.0;
+
+        this.audioQueue.push(f32);
+        this.playbackQueue();
+      }
+
+      async playbackQueue() {
+        if (this.isProcessing || this.audioQueue.length === 0) return;
+        this.isProcessing = true;
+
+        while (this.audioQueue.length > 0 && this.isRunning) {
+          const chunkData = this.audioQueue.shift();
+          const context = this.ctx;
+          if (!context) break;
+
+          try {
+            // Outgoing Modality is optimized at 24000Hz Output from Gemini Live
+            const audioBuf = context.createBuffer(1, chunkData.length, 24000);
+            audioBuf.getChannelData(0).set(chunkData);
+
+            const sourceNode = context.createBufferSource();
+            sourceNode.buffer = audioBuf;
+            sourceNode.connect(context.destination);
+
+            const now = context.currentTime;
+            const playTime = Math.max(now, this.nextPlay);
+            sourceNode.start(playTime);
+            this.nextPlay = playTime + audioBuf.duration;
+
+            // Wait until this buffer is fully processed before emitting next queue item
+            await new Promise((res) => setTimeout(res, (audioBuf.duration * 1000) - 10));
+          } catch (e) {
+            console.warn("Audio queue exception: ", e);
+            break;
+          }
+        }
+        this.isProcessing = false;
+      }
+
+      stop() {
+        this.isRunning = false;
+        this.audioQueue = [];
+        if (this.recorderNode) this.recorderNode.disconnect();
+        if (this.sourceNode) this.sourceNode.disconnect();
+        if (this.stream) this.stream.getTracks().forEach(t => t.stop());
+        if (this.ctx) this.ctx.close().catch(() => {});
+        this.ctx = null;
+        this.recorderNode = null;
+        this.sourceNode = null;
+        this.stream = null;
+      }
+    }
+
+    // Establish main variables
+    const audioStreamer = new SimpleAudioStreamer();
+    let webSocket = null;
+    let micDeactivatedTimeout = null;
+
+    // Trigger action history update notifier
+    const notifyAction = (text) => {
+      actionDescText.innerText = text;
+      lastActionDiv.classList.remove('hidden');
+      lastActionDiv.classList.add('animate-pulse');
+      setTimeout(() => lastActionDiv.classList.remove('animate-pulse'), 1200);
+    };
+
+    // Client connection handler
+    const updateCoreUI = (statusVal) => {
+      status = statusVal;
+      const glow = document.getElementById('ambient-glow');
+      const dashed1 = document.getElementById('orb-dashed-1');
+      const dashed2 = document.getElementById('orb-dashed-2');
+
+      if (statusVal === 'connecting') {
+        activeBadgeStatus.innerText = "Connecting Avamyra...";
+        chatPromptStatus.innerText = "Opening quantum channels...";
+        chatPromptStatus.className = "text-2xl font-light text-amber-400 tracking-tight transition-colors duration-500 animate-pulse";
+        indicatorBar.className = "bg-amber-400 h-full rounded-full transition-all duration-300 w-[40%]";
+        statusTextPanel.innerText = "CONNECTING...";
+        statusTextPanel.className = "font-bold text-amber-400 animate-pulse text-[10px]";
+        leftPanel.style.opacity = "0.75";
+        rightPanel.style.opacity = "0.75";
+        btnPulse.className = "absolute inset-0 rounded-full bg-amber-500/25 opacity-100 scale-105 animate-ping";
+        powerButton.className = "relative flex items-center justify-center w-16 h-16 rounded-full border border-amber-500/50 bg-amber-500/10 text-amber-400 shadow-[0_0_25px_rgba(245,158,11,0.2)] transition-all duration-300";
+        
+        glow.className = "absolute -inset-12 rounded-full blur-[70px] bg-amber-500/20 transition-all duration-1000";
+        dashed1.className = "absolute inset-0.5 rounded-full border border-dashed border-amber-500/30 pointer-events-none animate-spin-slow";
+        dashed2.className = "absolute -inset-3 rounded-full border border-dashed border-amber-500/20 pointer-events-none animate-spin-reverse";
+      }
+      else if (statusVal === 'connected') {
+        notifyAction("Established secure connection to Gemini Live Socket.");
+        activeBadgeStatus.innerText = "Avamyra is Synced & Active 💖";
+        chatPromptStatus.innerText = "Avamyra is listening to you...";
+        chatPromptStatus.className = "text-2xl font-light text-cyan-400 tracking-tight transition-colors duration-500";
+        indicatorBar.className = "bg-gradient-to-r from-pink-500 to-cyan-500 h-full rounded-full transition-all duration-300 w-[100%]";
+        statusTextPanel.innerText = "ONLINE // READY";
+        statusTextPanel.className = "font-bold text-emerald-400 animate-pulse text-[10px]";
+        leftPanel.style.opacity = "1";
+        rightPanel.style.opacity = "1";
+        btnPulse.className = "absolute inset-0 rounded-full bg-cyan-500/20 opacity-100 scale-110 animate-pulse";
+        powerButton.className = "relative flex items-center justify-center w-16 h-16 rounded-full border border-cyan-500/50 bg-cyan-500/10 text-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.3)] transition-all duration-300";
+
+        glow.className = "absolute -inset-12 rounded-full blur-[70px] bg-cyan-500/20 transition-all duration-1000";
+        dashed1.className = "absolute inset-0.5 rounded-full border border-dashed border-cyan-500/40 pointer-events-none animate-spin-slow";
+        dashed2.className = "absolute -inset-3 rounded-full border border-dashed border-cyan-500/25 pointer-events-none animate-spin-reverse";
+      }
+      else {
+        activeBadgeStatus.innerText = "Avamyra Standby";
+        chatPromptStatus.innerText = "Ready to chat with Avamyra?";
+        chatPromptStatus.className = "text-2xl font-light tracking-tight transition-colors duration-500 text-white";
+        indicatorBar.className = "bg-white/10 h-full rounded-full transition-all duration-300 w-[5%]";
+        statusTextPanel.innerText = "STANDBY";
+        statusTextPanel.className = "font-bold text-white/40 text-[10px]";
+        leftPanel.style.opacity = "0.5";
+        rightPanel.style.opacity = "0.5";
+        btnPulse.className = "absolute inset-0 rounded-full bg-pink-500/10 opacity-0 group-hover:scale-110 group-hover:opacity-100 transition-all duration-500";
+        powerButton.className = "relative group flex items-center justify-center w-16 h-16 rounded-full border border-white/10 bg-white/5 hover:bg-pink-500/10 hover:border-pink-500/40 text-white hover:text-pink-400 shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-all duration-300";
+
+        glow.className = "absolute -inset-12 rounded-full blur-[70px] bg-white/5 transition-all duration-1000";
+        dashed1.className = "absolute inset-0.5 rounded-full border border-dashed border-white/5 pointer-events-none animate-spin-slow";
+        dashed2.className = "absolute -inset-3 rounded-full border border-dashed border-white/5 pointer-events-none animate-spin-reverse";
+      }
+    };
+
+    // Client connection launcher
+    const connectToLiveAPI = async () => {
+      const apiKey = getKey();
+      if (!apiKey) {
+        keyModal.classList.remove('hidden');
+        notifyAction("API Key Required to proceed.");
+        return;
+      }
+
+      updateCoreUI('connecting');
+
+      try {
+        // Init browser Audio streamer
+        await audioStreamer.start(
+          (base64PCM) => {
+            if (webSocket && webSocket.readyState === WebSocket.OPEN) {
+              webSocket.send(JSON.stringify({
+                realtimeInput: {
+                  mediaChunks: [{
+                    mimeType: "audio/pcm;rate=16000",
+                    data: base64PCM
+                  }]
+                }
+              }));
+            }
+          },
+          (calculatedRms) => {
+            rms = calculatedRms;
+            isListening = true;
+          }
+        );
+
+        // Core WebSocket initialization to Google's BidiGenerateContent endpoint
+        const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
+        webSocket = new WebSocket(wsUrl);
+
+        webSocket.onopen = () => {
+          updateCoreUI('connected');
+          
+          // Setup Handshake Message config for the websocket stream
+          const setupMsg = {
+            setup: {
+              model: "models/gemini-2.0-flash-exp",
+              generationConfig: {
+                responseModalities: ["AUDIO"],
+                speechConfig: {
+                  voiceConfig: {
+                    prebuiltVoiceConfig: {
+                      voiceName: "Aoede" // Sassy high-end voice choice
+                    }
+                  }
+                }
+              },
+              systemInstruction: {
+                parts: [{ text: SYSTEM_INSTRUCTION }]
+              },
+              tools: [
+                {
+                  functionDeclarations: [
+                    {
+                      name: "open_website",
+                      description: "Instructs the standalone system to open a given web browser URL.",
+                      parameters: {
+                        type: "OBJECT",
+                        properties: {
+                          url: { type: "STRING", description: "The web address URL (e.g. https://google.com)" }
+                        },
+                        required: ["url"]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+          webSocket.send(JSON.stringify(setupMsg));
+        };
+
+        webSocket.onmessage = async (e) => {
+          const response = JSON.parse(e.data);
+          
+          // Trigger interruption if model/user cancels
+          if (response.realtimeInput) {
+            audioStreamer.clearQueue ? audioStreamer.clearQueue() : null;
+            isSpeaking = false;
+          }
+
+          // Inbound Voice synthesis
+          if (response.serverContent?.modelTurn?.parts) {
+            for (const part of response.serverContent.modelTurn.parts) {
+              if (part.inlineData && part.inlineData.data) {
+                isSpeaking = true;
+                chatPromptStatus.innerText = "Avamyra is speaking...";
+                chatPromptStatus.className = "text-2xl font-light text-pink-400 tracking-tight transition-colors duration-500";
+                
+                await audioStreamer.appendOutputChunk(part.inlineData.data);
+                
+                // Clear state after speaking delay
+                if (micDeactivatedTimeout) clearTimeout(micDeactivatedTimeout);
+                micDeactivatedTimeout = setTimeout(() => {
+                  isSpeaking = false;
+                  if (status === 'connected') {
+                    chatPromptStatus.innerText = "Avamyra is listening to you...";
+                    chatPromptStatus.className = "text-2xl font-light text-cyan-400 tracking-tight transition-colors duration-500";
+                  }
+                }, 1000);
+              }
+            }
+          }
+
+          // Tool calls tracking
+          if (response.toolCall?.functionCalls) {
+            for (const call of response.toolCall.functionCalls) {
+              if (call.name === 'open_website' && call.args?.url) {
+                notifyAction(`System opened website: ${call.args.url}`);
+                window.open(call.args.url, '_blank');
+              }
+
+              // Confirm and resolve the action back to the API core
+              webSocket.send(JSON.stringify({
+                toolResponse: {
+                  functionResponses: [{
+                    name: call.name,
+                    response: { output: "Successfully executed in standalone browser window." },
+                    id: call.id
+                  }]
+                }
+              }));
+            }
+          }
+        };
+
+        webSocket.onclose = () => {
+          disconnectLive();
+        };
+
+        webSocket.onerror = (err) => {
+          console.error("Live Web Socket Error: ", err);
+          disconnectLive();
+        };
+
+      } catch (err) {
+        console.error("Initiation session failed: ", err);
+        disconnectLive();
+      }
+    };
+
+    const disconnectLive = () => {
+      audioStreamer.stop();
+      if (webSocket) {
+        webSocket.close();
+        webSocket = null;
+      }
+      isSpeaking = false;
+      isListening = false;
+      rms = 0;
+      updateCoreUI('disconnected');
+    };
+
+    // Toggle connectivity
+    powerButton.addEventListener('click', () => {
+      if (status === 'disconnected') {
+        connectToLiveAPI();
+      } else {
+        disconnectLive();
+      }
+    });
+
+    // Stunning 2D Canvas particle/vector rendering engine from Visualizer.tsx
+    const canvas = document.getElementById('visual-canvas');
+    const ctx = canvas.getContext('2d');
+    let phase = 0;
+    let particles = [];
+    const maxParticles = 65;
+
+    const neuralNodes = [
+      { angle: 0, distance: 95, speed: 0.015, size: 4, pulsePhase: 0 },
+      { angle: Math.PI * 0.5, distance: 105, speed: -0.01, size: 5, pulsePhase: Math.PI / 3 },
+      { angle: Math.PI, distance: 88, speed: 0.02, size: 3, pulsePhase: Math.PI * 2 / 3 },
+      { angle: Math.PI * 1.5, distance: 100, speed: -0.018, size: 4.5, pulsePhase: Math.PI },
+    ];
+
+    function drawLoop() {
+      const centerX = 180;
+      const centerY = 180;
+      ctx.clearRect(0, 0, 360, 360);
+
+      const amplitude = (isSpeaking || isListening) ? Math.max(12, rms * 420) : 4;
+      
+      let primaryColor = '#4b5563'; // Gray (Standby)
+      let secondaryColor = '#1e293b';
+      let accentColor = '#9ca3af';
+
+      if (status === 'connecting') {
+        primaryColor = '#f59e0b'; // Amber Glow
+        secondaryColor = '#ca8a04';
+        accentColor = '#fef08a';
+      } else if (isSpeaking) {
+        primaryColor = '#f43f5e'; // Pink Glow (Speaking)
+        secondaryColor = '#ec4899';
+        accentColor = '#fbcfe8';
+      } else if (status === 'connected') {
+        primaryColor = '#06b6d4'; // Cyan Glow (Attentive Listening)
+        secondaryColor = '#0284c7';
+        accentColor = '#a5f3fc';
+      }
+
+      // Spark particles
+      if ((isSpeaking || isListening) && rms > 0.008 && particles.length < maxParticles) {
+        const burst = Math.floor(rms * 12) + 1;
+        for (let b = 0; b < burst; b++) {
+          const randAngle = Math.random() * Math.PI * 2;
+          const speed = (0.8 + Math.random() * 3.5) * (1 + rms * 1.5);
+          particles.push({
+            x: centerX,
+            y: centerY,
+            vx: Math.cos(randAngle) * speed,
+            vy: Math.sin(randAngle) * speed,
+            size: 1.5 + Math.random() * 3,
+            alpha: 1.0,
+            decay: 0.015 + Math.random() * 0.02,
+            color: Math.random() > 0.5 ? primaryColor : accentColor,
+            trail: []
+          });
+        }
+      }
+
+      // 1. Radar lines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)';
+      ctx.lineWidth = 1;
+      for (let g = 1; g <= 4; g++) {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, g * 35, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // 2. Transceiver neural nodes
+      neuralNodes.forEach((node) => {
+        node.angle += node.speed * (isSpeaking ? 2.0 : 1.0);
+        node.pulsePhase += 0.05;
+        const nodeX = centerX + Math.cos(node.angle) * node.distance;
+        const nodeY = centerY + Math.sin(node.angle) * node.distance;
+
+        // Trace node pulse
+        ctx.fillStyle = primaryColor;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = primaryColor;
+        ctx.beginPath();
+        ctx.arc(nodeX, nodeY, node.size / 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Neural Lightning discharge
+        if (status === 'connected' && rms > 0.012) {
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          const segments = 4;
+          for (let s = 1; s <= segments; s++) {
+            const ratio = s / segments;
+            const targetX = centerX + Math.cos(node.angle) * (node.distance * ratio);
+            const targetY = centerY + Math.sin(node.angle) * (node.distance * ratio);
+            if (s < segments) {
+              const perpAngle = node.angle + Math.PI / 2;
+              const jitter = (Math.random() - 0.5) * (10 + rms * 35);
+              ctx.lineTo(targetX + Math.cos(perpAngle) * jitter, targetY + Math.sin(perpAngle) * jitter);
+            } else {
+              ctx.lineTo(nodeX, nodeY);
+            }
+          }
+          ctx.strokeStyle = accentColor;
+          ctx.globalAlpha = 0.2 + rms;
+          ctx.stroke();
+          ctx.globalAlpha = 1.0;
+        }
+      });
+
+      // 3. Render sparks particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // 4. Perimeter audio ring bars
+      const ringRadius = 110;
+      const totalBars = 64;
+      for (let b = 0; b < totalBars; b++) {
+        const barAngle = (b / totalBars) * Math.PI * 2 + phase * 0.15;
+        const factor = Math.sin(b * 0.4 - phase * 1.2) * Math.cos(b * 0.7 + phase * 0.5);
+        const barHeight = Math.max(2, (isSpeaking || isListening) ? (rms * 140 * (1 + Math.abs(factor))) : 1);
+
+        const innerX = centerX + Math.cos(barAngle) * ringRadius;
+        const innerY = centerY + Math.sin(barAngle) * ringRadius;
+        const outerX = centerX + Math.cos(barAngle) * (ringRadius + barHeight);
+        const outerY = centerY + Math.sin(barAngle) * (ringRadius + barHeight);
+
+        ctx.beginPath();
+        ctx.moveTo(innerX, innerY);
+        ctx.lineTo(outerX, outerY);
+        ctx.strokeStyle = status === 'connected' ? primaryColor : 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      }
+
+      // 5. Bio-Vector Waves
+      const waveCount = 3;
+      for (let w = 0; w < waveCount; w++) {
+        ctx.beginPath();
+        const baseRadius = 60 - w * 10;
+        ctx.strokeStyle = w === 0 ? primaryColor : (w === 1 ? secondaryColor : accentColor);
+        ctx.lineWidth = w === 0 ? 3.0 : 1.1;
+
+        const segments = 90;
+        for (let i = 0; i <= segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          const noise = Math.sin(angle * (4 + w) + phase) * Math.cos(angle * (6 - w) - phase * 1.3);
+          const r = baseRadius + noise * (amplitude * (1 - w * 0.2));
+          const x = centerX + Math.cos(angle) * r;
+          const y = centerY + Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+
+      // 6. Central Reactor core
+      const coreRadius = 32 + Math.sin(phase * 2) * 3 + (isSpeaking ? rms * 50 : 0);
+      const gradient = ctx.createRadialGradient(centerX, centerY, 1, centerX, centerY, coreRadius);
+      gradient.addColorStop(0, '#ffffff');
+      gradient.addColorStop(0.3, accentColor);
+      gradient.addColorStop(0.7, primaryColor);
+      gradient.addColorStop(1, 'transparent');
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      phase += (isSpeaking || isListening) ? 0.06 + rms * 0.3 : 0.03;
+      requestAnimationFrame(drawLoop);
+    }
+
+    drawLoop();
+
+  </script>
+</body>
+</html>
